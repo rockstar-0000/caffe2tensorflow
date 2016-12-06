@@ -149,6 +149,15 @@ class Network(object):
         return tf.nn.relu(input, name=name)
 
     @layer
+    def prelu(self, input, name):
+        with tf.variable_scope(name):
+            i = input.get_shape().as_list()
+            alpha = self.make_var('alpha', shape=(i[-1]))
+            output = tf.nn.relu(input) + tf.mul(tf.ones(i[0:-1]+[1]) * alpha, -tf.nn.relu(-input))
+            #output = tf.nn.relu(input) + tf.mul(tf.ones((i[0],i[1],i[2],1)) * alpha, -tf.nn.relu(-input))
+        return output
+
+    @layer
     def max_pool(self, input, k_h, k_w, s_h, s_w, name, padding=DEFAULT_PADDING):
         self.validate_padding(padding)
         return tf.nn.max_pool(input,
@@ -201,18 +210,20 @@ class Network(object):
             fc = op(feed_in, weights, biases, name=scope.name)
             return fc
 
+    """
+    Multi dimensional softmax,
+    refer to https://github.com/tensorflow/tensorflow/issues/210
+    compute softmax along the dimension of target
+    the native softmax only supports batch_size x dimension
+    """
     @layer
-    def softmax(self, input, name):
-        input_shape = map(lambda v: v.value, input.get_shape())
-        if len(input_shape) > 2:
-            # For certain models (like NiN), the singleton spatial dimensions
-            # need to be explicitly squeezed, since they're not broadcast-able
-            # in TensorFlow's NHWC ordering (unlike Caffe's NCHW).
-            if input_shape[1] == 1 and input_shape[2] == 1:
-                input = tf.squeeze(input, squeeze_dims=[1, 2])
-            else:
-                raise ValueError('Rank 2 tensor input expected for softmax!')
-        return tf.nn.softmax(input, name)
+    def softmax(self, target, axis, name=None):
+        print('Softmax: %s' % name)
+        max_axis = tf.reduce_max(target, axis, keep_dims=True)
+        target_exp = tf.exp(target-max_axis)
+        normalize = tf.reduce_sum(target_exp, axis, keep_dims=True)
+        softmax = tf.div(target_exp, normalize, name)
+        return softmax
 
     @layer
     def batch_normalization(self, input, name, scale_offset=True, relu=False):

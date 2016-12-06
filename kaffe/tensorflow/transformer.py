@@ -104,6 +104,9 @@ class TensorFlowMapper(NodeMapper):
     def map_relu(self, node):
         return TensorFlowNode('relu')
 
+    def map_p_re_lu(self, node):
+        return TensorFlowNode('prelu')
+      
     def map_pooling(self, node):
         pool_type = node.parameters.pool
         if pool_type == 0:

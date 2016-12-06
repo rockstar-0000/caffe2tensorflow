@@ -282,6 +282,8 @@ class ParameterNamer(object):
                 names = ('mean', 'variance')
                 if len(node.data) == 4:
                     names += ('scale', 'offset')
+            elif node.kind == NodeKind.PReLU:
+                names = ('alpha',)
             else:
                 print_stderr('WARNING: Unhandled parameters: {}'.format(node.kind))
                 continue
